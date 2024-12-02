@@ -1,5 +1,7 @@
 #include <iostream>
 #include <vector>
+#include <string>
+#include <fstream>
 
 using namespace std;
 
@@ -9,21 +11,42 @@ protected:
     vector<vector<int>> point_change;
 public:
     Question(){}
-    virtual vector<vector<string>> GetQuestions() = 0;
+    //questions 게터
+    virtual vector<vector<string>> GetQuestions(string con) = 0;
+    //point_change 게터
     virtual int GetPointChange(int question_number, int index) = 0;
+    //텍스트파일에서 질문 불러오는 함수
+    virtual void DeleteQuestion(int question_number) = 0;
+    vector<vector<string>> InitializeQuestions(string file){
+        ifstream ques(file);
+        vector<vector<string>> questions;
+        string line;
+        while (getline(ques, line)) { // 파일에서 한 줄씩 읽기
+            vector<string> row; // 한 줄에 해당하는 벡터
+            string value;
+
+            for (size_t i = 0; i < line.size(); ++i) {
+                if (line[i] == '|') { // 구분자 만나면 새로운 값 저장
+                    row.push_back(value); 
+                    value.clear(); // 다음 값을 위해 초기화
+                } else {
+                    value += line[i]; // 구분자 전까지 값 추가
+                }
+            }
+            if (!value.empty()) { // 마지막 값 처리
+                row.push_back(value);
+            }
+            questions.push_back(row); // 한 줄을 2차원 벡터에 추가
+        }
+        return questions;
+    }
 };
 
 class GeneralQuestion : public Question{
 public:
     GeneralQuestion(){
+        questions = InitializeQuestions("questions.txt");
         //index 0 = 질문, 1, 2 = 질문에 대한 선택지, 3, 4 = 선택지에 대한 문구
-        questions = {
-            {"동쪽 국경 부근 산악지대에 무법자가 날뛰고 있습니다.","1. 그냥 내버려두게.", "2. 병사를 파견하게.", "시민들이 산적들에게 당해 재산을 잃었습니다.", "병사를 파견하여 시민과 자산을 구했습니다."},
-            {"역병 감염이 의심되는 배 한 척이 있습니다. 항구를 잠시 봉쇄하시겠습니까?","1. 아니.", "2. 당장 봉쇄하게.", "그 배와의 무역은 성공적이었으나 병사와 시민들이 역병에 전염됐습니다.", "무역은 실패했지만 시민들로부터 환호를 받았습니다."},
-            {"큰 규모의 지진이 발생했습니다! 지시를 내려주십시오!","1. 피해자들을 구출하게.", "2. 파괴된 수도부터 수리하게.", "시설이 망가졌지만 시민과 신도들이 사람을 중요시 한점을 높게 봅니다.", "시설은 잘 지켰으나 사람을 먼저하지 않은 점에 백성들이 화가 났습니다."},
-            {"폐하! 올해는 풍년입니다.","1. 병사들에게 식량을 주게.", "2. 백성들에게 음식을 주게.", "백성들의 피와 땀으로 수확한 식량을 병사들에게 나눠줍니다.", "세금으로 걷은 쌀을 그대로 돌려주어 백성들이 환호합니다."},
-            {"폐하, 이웃나라의 젊은 공주와 결혼하시겠습니까?","1. 예", "2. 아니오", "재산, 종교적으로 훌륭한 교류였으나 남의 나라 공주와 결혼하는 것을 백성들이 마음에 들지 않아합니다.", "아무 일도 일어나지 않습니다."}
-        };
         point_change = {   
             {0, -1, 0, -1, 0, 1, -1, 2},
             {0, 2, -1, -1, 0, -2, 0, 2},
@@ -32,29 +55,32 @@ public:
             {2, 2, 2, -2, 0, 0, 0, 0}
         };
     }
-    vector<vector<string>> GetQuestions(){
+
+    vector<vector<string>> GetQuestions(string con){
         return questions;
     }
+
     int GetPointChange(int question_number, int index){
         return point_change[question_number][index];
+    }
+    
+    void DeleteQuestion(int question_number){
+        if (!questions.empty()){
+            questions.erase(questions.begin() + question_number);
+            point_change.erase(point_change.begin() + question_number);
+        }
     }
 };
 
 class SpecialQuestion : public Question{
+private:
+    vector<vector<string>> questions_list;
+    vector<vector<int>> point_change_list;
 public:
-    SpecialQuestion(string con){
+    SpecialQuestion(){
         //현재 컨디션 (포인트 상태)에 따라 해당하는 상태를 나타내는 "r+, r-, m+ ...." 등의 문자열을 index 5에 추가.
-        vector<vector<string>> questions_list = {
-            {"그분.. 그분의 동상이 필요해.. 필요합니다..", "1, 동상을 건설하도록.", "2. 안돼.", "오오.. 주님...이시여...", "주여.. 죄송합니다.....", "r+"},
-            {"신의 은총이 매우 절실한 순간입니다..", "1. 제물을 바치게.", "2. 내가 바로 신이네.", "이 제물로 주께서 행복하시다면야..", "이런 미친왕이!! 당신에게 주께서 큰 시련을 부여할지니!!!", "r-"},
-            {"흠.. 심심한데 돈이나 뿌리고 놀아볼까?", "1. 예", "2. 아니오", "돈을 써서 모두를 행복하게 만들었습니다.", "아무런 일도 일어나지 않습니다.", "p+"},
-            {"폐하 국고가 바닥났습니다. 옆 나라의 도움을 받아보시겠습니까? 대가는 지불하지 않아도 된다고 합니다.", "1. 도움을 받게.", "2. 도움따위 필요없네", "큰 도움을 받았으나, 백성들이 자존심상해 합니다.", "백성들이 자존심을 약간 회복합니다.", "p-"},
-            {"병사 수가 상당합니다. 당장 옆나라로 쳐들어갑시다.", "1. 공격하게.", "2. 그럴 필요 없네.", "군사력으로 옆 나라의 재산을 빼앗아 명예를 올렸습니다.", "말을 듣지 않아 병사와 백성들이 삐졌습니다.", "m+"},
-            {"군사력이 부족합니다. 백성들을 징집할까요?", "1. 징집하게.", "2. 그래도 징집은 아니지.", "군사력이 올랐으나 백성들이 크게 분노합니다.", "백성들이 안도의 한숨을 쉽니다.", "m-"},
-            {"폐하, 사랑합니다.", "1. 뭐야?", "2. 뭐야~", "백성의 사랑을 거부하여 신도들과 백성들에게 명예가 떨어졌습니다. ", "사랑을 받아주어 신도와 백성들이 행복해합니다.", "c+"},
-            {"폐하, 백성들의 움직임이 심상치 않습니다.", "1. 당장 가서 진압하도록.", "2. 국고를 열어 그들을 진정시키게.", "병사를 파견하여 성공적으로 진압했으나 신도들의 눈빛이 이상해졌습니다.", "돈으로 그들의 환심을 샀습니다.", "c-"}
-        };
-        vector<vector<int>> point_change_list = {
+        questions = InitializeQuestions("special_questions.txt");
+        point_change_list = {
             {10, -3, 0, -2, -5, 0, 0, 0},
             {3, 0, 0, -3, -10, 0, 0, 0},
             {2, -3, 2, 2, 0, 0, 0, 0},
@@ -64,19 +90,30 @@ public:
             {-2, 0, 0, -2, 2, 0, 0, 2},
             {-2, 0, -2, 2, 0, -2, 0, 2}
         };
-        //현재 컨디션에 따른 질문들을 2차원 벡터 questions로 설정.
-        //질문 인덱스에 맞는 포인트 변화량도 같은 방식으로 설정.
-        for (int i = 0; i < questions_list.size(); i++){
-            if (questions_list[i][5] == con) {
-                this->questions.push_back(questions_list[i]);
-                this->point_change.push_back(point_change_list[i]);
+    }
+
+    vector<vector<string>> GetQuestions (string con){
+        questions_list.clear();
+        point_change.clear();
+        for (int i = 0; i < questions.size(); i++){
+            if (questions[i][5] == con) {
+                questions_list.push_back(questions[i]);
+                point_change.push_back(point_change_list[i]);
             }
         }
+        return questions_list;
     }
-    vector<vector<string>> GetQuestions(){
-        return questions;
-    }
+
     int GetPointChange(int question_number, int index){
         return point_change[question_number][index];
+    }
+
+    void DeleteQuestion(int question_number){
+        for (int i = 0; i < questions.size(); i++){
+            if (questions[i] == questions_list[question_number]){
+                questions.erase(questions.begin() + i);
+                point_change.erase(point_change.begin() + i);
+            }
+        }
     }
 };
