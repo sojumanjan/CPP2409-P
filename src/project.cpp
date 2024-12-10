@@ -7,9 +7,7 @@
 using namespace std;
 
 
-//질문과 대답 개수
-const int question_count = 5;
-const int special_question_count = 8;
+//대답 개수 (최대 3)
 const int answer_count = 2;
 //관리해야 하는 포인트 4가지 (종교, 자산, 군사, 민심) 범위 : 0~10
 int religion_point = 5, property_point = 5, military_point = 5, citizen_point = 5;
@@ -66,18 +64,18 @@ int main(){
                     else {
                         question = &general_question;
                     }
-                    question_number = rand() % question->GetQuestions(condition).size();
                 }
                 else{
                     cout << "남아있는 특수 질문이 없습니다." << endl;
-                    break;
+                    question = &general_question;
                 }
+                question_number = rand() % question->GetQuestions(condition).size();
             }
         
 
         //일 수 추가 후 종료조건 확인
         day_count++;
-        if (day_count == 10){
+        if (day_count == 20){
             cout << "10일차가 되었습니다. 당신은 국왕으로서의 책무를 다했습니다. 축하합니다." << endl;
             break;
         }
@@ -86,7 +84,7 @@ int main(){
         DrawUI(day_count);
 
         //질문과 답변 출력
-        for (int i = 0; i < 3; i++){
+        for (int i = 0; i < answer_count + 1; i++){
             cout << question->GetQuestions(condition)[question_number][i] << endl;
         }
 

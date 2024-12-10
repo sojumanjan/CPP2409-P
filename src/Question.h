@@ -17,7 +17,7 @@ public:
     virtual int GetPointChange(int question_number, int index) = 0;
     //텍스트파일에서 질문 불러오는 함수
     virtual void DeleteQuestion(int question_number) = 0;
-    vector<vector<string>> InitializeQuestions(string file){
+    vector<vector<string>> InitializeQuestions(const string file){
         ifstream ques(file);
         vector<vector<string>> questions;
         string line;
@@ -40,20 +40,39 @@ public:
         }
         return questions;
     }
+    vector<vector<int>> InitializePointChange(const string file) {
+        vector<vector<int>> data;
+        ifstream point(file);
+        string line;
+        // 파일에서 한 줄씩 읽기
+        while (getline(point, line)) {
+            vector<int> row;  // 한 줄의 데이터를 저장할 벡터
+            string value = ""; // 값 저장용 문자열
+            // 문자열 순회하며 '|' 처리
+            for (char c : line) {
+                if (c == '|') {  // 구분자(|)를 만난 경우
+                    row.push_back(stoi(value));  // 문자열을 정수로 변환 후 저장
+                    value = "";  // value 초기화
+                } else {
+                    value += c;  // 숫자 문자를 value에 추가
+                }
+            }
+            if (!value.empty()) {
+                row.push_back(stoi(value));
+            }
+            data.push_back(row);  // 완성된 행을 2차원 벡터에 추가
+        }
+        point.close();  // 파일 닫기
+        return data;   // 2차원 벡터 반환
+    }
 };
 
 class GeneralQuestion : public Question{
 public:
     GeneralQuestion(){
         questions = InitializeQuestions("questions.txt");
-        //index 0 = 질문, 1, 2 = 질문에 대한 선택지, 3, 4 = 선택지에 대한 문구
-        point_change = {   
-            {0, -1, 0, -1, 0, 1, -1, 2},
-            {0, 2, -1, -1, 0, -2, 0, 2},
-            {1, -1, -1, 2, -1, 1, 0, -2},
-            {0, 1, 2, -1, 0, 0, 0, 2},
-            {2, 2, 2, -2, 0, 0, 0, 0}
-        };
+        //index 0 1 2 3은 각각 종교, 재산, 군사, 민심 포인트의 증감량
+        point_change = InitializePointChange("point_change.txt");
     }
 
     vector<vector<string>> GetQuestions(string con){
@@ -80,16 +99,7 @@ public:
     SpecialQuestion(){
         //현재 컨디션 (포인트 상태)에 따라 해당하는 상태를 나타내는 "r+, r-, m+ ...." 등의 문자열을 index 5에 추가.
         questions = InitializeQuestions("special_questions.txt");
-        point_change_list = {
-            {10, -3, 0, -2, -5, 0, 0, 0},
-            {3, 0, 0, -3, -10, 0, 0, 0},
-            {2, -3, 2, 2, 0, 0, 0, 0},
-            {3, 3, 3, -1, 0, 0, 0, 1},
-            {0, 3, -3, 3, 0, 0, -1, -1},
-            {-2, 0, 3, -5, 0, 0, 0, 2},
-            {-2, 0, 0, -2, 2, 0, 0, 2},
-            {-2, 0, -2, 2, 0, -2, 0, 2}
-        };
+        point_change_list = InitializePointChange("special_point_change.txt");
     }
 
     vector<vector<string>> GetQuestions (string con){
